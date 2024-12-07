@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessSharp"
         mc:Ignorable="d"
-        Title="Chess PGN Viewer" MinHeight="600" MinWidth="1400">
+        Title="ChessSharp" MinHeight="600" MinWidth="1400">
 
     <Grid Background="#FF1E1E1E">
         <!-- Define rows and columns for layout -->
@@ -64,11 +64,15 @@
                 <RowDefinition Height="242*"/>
             </Grid.RowDefinitions>
             <!-- Chessboard Canvas with background image -->
-            <Canvas HorizontalAlignment="Left" Width="486" Margin="263,10,0,0" Grid.RowSpan="2" Height="449" VerticalAlignment="Top" Grid.ColumnSpan="2">
+            <Canvas Name="ChessBoardCanvas" HorizontalAlignment="Left" Width="486" Margin="263,10,0,0" Grid.RowSpan="2" Height="449" VerticalAlignment="Top" Grid.ColumnSpan="2" MouseLeftButtonDown="ChessBoardCanvas_MouseLeftButtonDown">
                 <Canvas.Background>
-                    <ImageBrush ImageSource="/chessboard.png"/>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="Black"/>
+                        <GradientStop Color="#FF750000" Offset="1"/>
+                    </LinearGradientBrush>
                 </Canvas.Background>
             </Canvas>
+
         </Grid>
 
         <!-- Score Sheet TabControl on the right -->
@@ -82,8 +86,8 @@
         </TabControl>
 
         <!-- Bottom StatusBar -->
-        <StatusBar Grid.Row="4" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#FF7160E8" Height="22">
-            <StatusBarItem Content="Status: Ready" Foreground="White"/>
+        <StatusBar x:Name="MainStatusBar" Grid.Row="4" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#FF7160E8" Height="22">
+            <StatusBarItem x:Name="StatusItem" Content="Status: Ready" Foreground="White"/>
         </StatusBar>
     </Grid>
 </Window>
