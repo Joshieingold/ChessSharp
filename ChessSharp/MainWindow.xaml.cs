@@ -166,9 +166,17 @@ namespace ChessSharp
             if (boardState[row, col] != null)
             {
                 selectedPiece = (row, col);
+                ChessPiece selectedPieceObject = boardState[row, col];
                 UpdateStatus($"Piece selected at ({row}, {col})");
-                HighlightValidMoves(row, col);
-            }
+                if (selectedPieceObject.Color == "White" && turnNum % 2 != 0)
+                {
+                    HighlightValidMoves(row, col);
+                }
+                else if (selectedPieceObject.Color == "Black" && turnNum % 2 == 0)
+                { 
+                
+                }
+                }
             else
             {
                 UpdateStatus("No piece at the clicked square.");
@@ -181,9 +189,23 @@ namespace ChessSharp
             ChessPiece selectedPieceObject = boardState[selectedRow, selectedCol];
             if (selectedPieceObject.IsValidMove(selectedRow, selectedCol, row, col, boardState))
             {
-                MovePiece(selectedRow, selectedCol, row, col);
-                selectedPieceObject.HasMoved = true;
-                SwitchTurn();  // Switch turn after each valid move
+                if (selectedPieceObject.Color == "White" && turnNum % 2 != 0)
+                {
+                    MovePiece(selectedRow, selectedCol, row, col);
+                    selectedPieceObject.HasMoved = true;
+                    SwitchTurn();  // Switch turn after each valid move
+                }
+                else if (selectedPieceObject.Color == "Black" && turnNum % 2 == 0)
+                {
+                    MovePiece(selectedRow, selectedCol, row, col);
+                    selectedPieceObject.HasMoved = true;
+                    SwitchTurn();  // Switch turn after each valid move
+                }
+                else
+                {
+                    return;
+                }
+
             }
             ClearHighlights();
             selectedPiece = null;
