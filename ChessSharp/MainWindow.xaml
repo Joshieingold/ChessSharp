@@ -5,14 +5,85 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessSharp"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1080" Width="1920">
+        Title="Chess PGN Viewer" MinHeight="600" MinWidth="1400">
+
     <Grid Background="#FF1E1E1E">
-        <ToolBarTray Height="48" VerticalAlignment="Top" Background="#FF2E2E2E"/>
-        <Grid Margin="0,48,0,0">
-            <Rectangle  HorizontalAlignment="Center" Height="27" Margin="0,989,0,0" Stroke="Black" VerticalAlignment="Top" Width="1920" Fill="#FF7160E8"/>
-            <Rectangle Stroke="#FF2E2E2E" Fill="#FF1A1A1A" Margin="0,0,1687,27"/>
-            <Rectangle Stroke="#FF2E2E2E" Fill="#FF1A1A1A" Margin="1515,0,0,27" Height="989" VerticalAlignment="Bottom"/>
-            <Canvas  Margin="405,30,585,56" Background="#FF3A0000"/>
+        <!-- Define rows and columns for layout -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Menu -->
+            <RowDefinition Height="Auto"/>
+            <!-- ToolBar for icons -->
+            <RowDefinition Height="Auto"/>
+            <!-- Content (Chessboard + Score Sheet) -->
+            <RowDefinition/>
+            <!-- StatusBar -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <!-- Chessboard Column -->
+            <ColumnDefinition Width="300"/>
+            <!-- Score Sheet Column (Fixed width) -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Menu for application -->
+        <Menu Grid.Row="0" Grid.ColumnSpan="2" Background="#FF2E2E2E" Foreground="White">
+            <MenuItem Header="File">
+                <MenuItem Header="Open"/>
+                <MenuItem Header="Save"/>
+            </MenuItem>
+            <MenuItem Header="Help">
+                <MenuItem Header="About"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ToolBar for Icons -->
+        <ToolBar Grid.Row="1" Grid.ColumnSpan="2" Background="#FF2E2E2E">
+            <Button Width="50" Height="50" ToolTip="New Game">
+                <Image  Width="32" Height="32"/>
+            </Button>
+            <Button Width="50" Height="50" ToolTip="Undo Move">
+                <Image  Width="32" Height="32"/>
+            </Button>
+            <Button Width="50" Height="50" ToolTip="Redo Move">
+                <Image  Width="32" Height="32"/>
+            </Button>
+            <!-- Add more buttons here as needed -->
+        </ToolBar>
+
+        <!-- Main content Grid for Chessboard and Tabs -->
+        <Grid Grid.Row="3" Grid.Column="0" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="271*"/>
+                <ColumnDefinition Width="269*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="227*"/>
+                <RowDefinition Height="242*"/>
+            </Grid.RowDefinitions>
+            <!-- Chessboard Canvas with background image -->
+            <Canvas HorizontalAlignment="Left" Width="486" Margin="263,10,0,0" Grid.RowSpan="2" Height="449" VerticalAlignment="Top" Grid.ColumnSpan="2">
+                <Canvas.Background>
+                    <ImageBrush ImageSource="/chessboard.png"/>
+                </Canvas.Background>
+            </Canvas>
         </Grid>
+
+        <!-- Score Sheet TabControl on the right -->
+        <TabControl Grid.Row="3" Grid.Column="1" Background="#FF1A1A1A">
+            <TabItem Header="Score Sheet" BorderBrush="#FF383838" Background="#FF383838" Foreground="#FFD40000">
+                <Grid Background="#FF1A1A1A"/>
+            </TabItem>
+            <TabItem Header="Other Info" BorderBrush="#FF383838" Background="#FF383838" Foreground="#FFE60000">
+                <Grid Background="#FF1A1A1A"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Bottom StatusBar -->
+        <StatusBar Grid.Row="4" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#FF7160E8" Height="22">
+            <StatusBarItem Content="Status: Ready" Foreground="White"/>
+        </StatusBar>
     </Grid>
 </Window>

@@ -8,4 +8,12 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="chessboard.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="chessboard.png" />
+  </ItemGroup>
+
 </Project>
