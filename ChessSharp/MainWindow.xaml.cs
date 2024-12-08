@@ -15,20 +15,19 @@ namespace ChessSharp
         private const int BoardSize = 8;
         private const double SquareSize = 60;
         private Canvas chessBoard;
-        private (int row, int col)? selectedPiece;
+        private (int row, int col)? selectedPiece; // Global tracking of the selected pieces location
         private ChessPiece[,] boardState = new ChessPiece[BoardSize, BoardSize];
-        private int turnNum = 1;
+        private int turnNum = 1; // Slightly useless now, but mainly keeps track of whose turn it is
         private List<string> FENList = new List<string>();
         int currentIndex = 0;
-
-        public ObservableCollection<ChessMove> MoveHistory { get; set; } = new ObservableCollection<ChessMove>();
+        public ObservableCollection<ChessMove> MoveHistory { get; set; } = new ObservableCollection<ChessMove>(); // Stores the moves, mainly for en passant.
         public MainWindow()
         {
             InitializeComponent();
             InitializeChessBoard();
             ScoreSheetListBox.ItemsSource = MoveHistory;
         }
-        private void RecordMove(int turnNumber, string whiteMove, string blackMove)
+        private void RecordMove(int turnNumber, string whiteMove, string blackMove) // Adds move number, and the move made to the movehistory, stored as a class (ChessMove)
         {
             // Add a new move to the history
             MoveHistory.Add(new ChessMove
@@ -38,13 +37,11 @@ namespace ChessSharp
                 BlackMove = blackMove
             });
         }
-
         private void ClearScoreSheet_Click(object sender, RoutedEventArgs e)
         {
             // Clear the move history
             MoveHistory.Clear();
         }
-
         private void UpdateStatus(string message)
         {
             StatusItem.Content = message;
@@ -215,7 +212,6 @@ namespace ChessSharp
                 UpdateStatus("No piece at the clicked square.");
             }
         }
-
         private void MoveSelectedPiece(int row, int col)
         {
             var (selectedRow, selectedCol) = selectedPiece.Value;
@@ -337,7 +333,6 @@ namespace ChessSharp
             ClearHighlights(); // Clear highlights after completing the move
             selectedPiece = null; // Deselect after the move
         }
-
         // Helper to generate move notation
         private string GetMoveNotation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol, bool isCapture)
 {
@@ -369,8 +364,6 @@ namespace ChessSharp
         return $"{pieceName}{destination}";
     }
 }
-
-
         // Helper method to determine disambiguation if needed
         private string GetDisambiguation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol)
         {
@@ -411,7 +404,6 @@ namespace ChessSharp
             else
                 return $"{(char)('a' + startCol)}"; // Use file only
         }
-
         // Example placeholders for IsCheck and IsCheckmate
         private bool IsCheck()
         {
