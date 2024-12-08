@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessSharp"
         mc:Ignorable="d"
-        Title="ChessSharp" MinHeight="600" MinWidth="1400">
+        Title="ChessSharp" MinHeight="600" MinWidth="1400"
+        KeyDown="Window_KeyDown">
+
 
     <Grid Background="#FF1E1E1E">
         <!-- Define rows and columns for layout -->
@@ -78,8 +80,33 @@
         <!-- Score Sheet TabControl on the right -->
         <TabControl Grid.Row="3" Grid.Column="1" Background="#FF1A1A1A">
             <TabItem Header="Score Sheet" BorderBrush="#FF383838" Background="#FF383838" Foreground="#FFD40000">
-                <Grid Background="#FF1A1A1A"/>
+                <Grid Background="#FF1A1A1A" Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- ListBox for moves -->
+                    <ListBox x:Name="ScoreSheetListBox" Grid.Row="0" Background="#FF282828" Foreground="White" BorderBrush="#FF383838" Margin="5"
+                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top" d:ItemsSource="{d:SampleData ItemCount=5}">
+                        <!-- Data template for moves -->
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Width="257">
+                                    <TextBlock Text="{Binding TurnNumber}" Width="83" Margin="5" Foreground="LightGray"/>
+                                    <TextBlock Text="{Binding WhiteMove}" Width="70" Margin="5" Foreground="White"/>
+                                    <TextBlock Text="{Binding BlackMove}" Width="71" Margin="5" Foreground="LightGray"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Button to clear score sheet -->
+                    <Button Grid.Row="1" Content="Clear Score Sheet" Background="#FF404040" Foreground="White" HorizontalAlignment="Right" Margin="5"
+                Width="120" Click="ClearScoreSheet_Click"/>
+                </Grid>
             </TabItem>
+
             <TabItem Header="Other Info" BorderBrush="#FF383838" Background="#FF383838" Foreground="#FFE60000">
                 <Grid Background="#FF1A1A1A"/>
             </TabItem>

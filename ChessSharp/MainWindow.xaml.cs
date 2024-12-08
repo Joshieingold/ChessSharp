@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Media.Imaging;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 
 namespace ChessSharp
 {
@@ -17,11 +18,33 @@ namespace ChessSharp
         private (int row, int col)? selectedPiece;
         private ChessPiece[,] boardState = new ChessPiece[BoardSize, BoardSize];
         private int turnNum = 1;
+        private List<string> FENList = new List<string>();
+        int currentIndex = 0;
+
+        public ObservableCollection<ChessMove> MoveHistory { get; set; } = new ObservableCollection<ChessMove>();
         public MainWindow()
         {
             InitializeComponent();
             InitializeChessBoard();
+            ScoreSheetListBox.ItemsSource = MoveHistory;
         }
+        private void RecordMove(int turnNumber, string whiteMove, string blackMove)
+        {
+            // Add a new move to the history
+            MoveHistory.Add(new ChessMove
+            {
+                TurnNumber = turnNumber,
+                WhiteMove = whiteMove,
+                BlackMove = blackMove
+            });
+        }
+
+        private void ClearScoreSheet_Click(object sender, RoutedEventArgs e)
+        {
+            // Clear the move history
+            MoveHistory.Clear();
+        }
+
         private void UpdateStatus(string message)
         {
             StatusItem.Content = message;
@@ -42,7 +65,10 @@ namespace ChessSharp
                 InitializeBoardState();
                 DrawChessBoard();
                 DrawPieces();
+                string fen = GenerateFen(boardState);
+                FENList.Add(fen); // Add the FEN string to the list
                 UpdateStatus("Chess board initialized successfully.");
+
             }
             catch (Exception ex)
             {
@@ -189,32 +215,50 @@ namespace ChessSharp
                 UpdateStatus("No piece at the clicked square.");
             }
         }
+
         private void MoveSelectedPiece(int row, int col)
         {
             var (selectedRow, selectedCol) = selectedPiece.Value;
             ChessPiece selectedPieceObject = boardState[selectedRow, selectedCol];
-
+            bool isCapture = boardState[row, col] != null; // Check if a piece exists at the destination
             // Check if the move is valid
             if (selectedPieceObject.IsValidMove(selectedRow, selectedCol, row, col, boardState))
             {
+                
+                string moveNotation = GetMoveNotation(selectedPieceObject, selectedRow, selectedCol, row, col, isCapture);
                 if (selectedPieceObject.Color == "White" && turnNum % 2 != 0)
                 {
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
+                        moveNotation = "O-O" + (col > selectedCol ? "" : "O-O-O"); // King-side or Queen-side castling notation
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
                     else if (selectedPieceObject is Pawn pawn && Math.Abs(selectedCol - col) == 1 && boardState[row, col] == null)
                     {
                         // Handle en passant capture for White
                         int capturedRow = row + 1; // En passant target is one row below the destination
                         boardState[capturedRow, col] = null; // Remove the captured pawn
+                        moveNotation += " e.p."; // En passant notation
                         MovePiece(selectedRow, selectedCol, row, col);
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
                     else
                     {
                         MovePiece(selectedRow, selectedCol, row, col);
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
+
                     selectedPieceObject.HasMoved = true;
+
+                    // Add to the score sheet for White
+                    RecordMove((turnNum + 1) / 2, moveNotation, string.Empty);
                     SwitchTurn(); // Switch turn after each valid move
                 }
                 else if (selectedPieceObject.Color == "Black" && turnNum % 2 == 0)
@@ -222,20 +266,38 @@ namespace ChessSharp
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
+                        moveNotation = "O-O" + (col > selectedCol ? "" : "O-O-O"); // King-side or Queen-side castling notation
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
                     else if (selectedPieceObject is Pawn pawn && Math.Abs(selectedCol - col) == 1 && boardState[row, col] == null)
                     {
                         // Handle en passant capture for Black
                         int capturedRow = row - 1; // En passant target is one row above the destination
                         boardState[capturedRow, col] = null; // Remove the captured pawn
+                        moveNotation += " e.p."; // En passant notation
                         MovePiece(selectedRow, selectedCol, row, col);
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
                     else
                     {
                         MovePiece(selectedRow, selectedCol, row, col);
+                        string fen = GenerateFen(boardState);
+                        FENList.Add(fen); // Add the FEN string to the list
+                        UpdateStatus(fen);
                     }
+
                     selectedPieceObject.HasMoved = true;
+
+                    // Add to the score sheet for Black
+                    var lastMove = MoveHistory.Last();
+                    lastMove.BlackMove = moveNotation;
+                    ScoreSheetListBox.Items.Refresh(); // Refresh the UI
                     SwitchTurn(); // Switch turn after each valid move
+
                 }
                 else
                 {
@@ -272,8 +334,281 @@ namespace ChessSharp
                 }
             }
 
-        ClearHighlights(); // Clear highlights after completing the move
+            ClearHighlights(); // Clear highlights after completing the move
             selectedPiece = null; // Deselect after the move
+        }
+
+        // Helper to generate move notation
+        private string GetMoveNotation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol, bool isCapture)
+{
+    // Get the piece notation (e.g., "N" for Knight, empty for Pawn)
+    string pieceName = piece is Pawn ? string.Empty : piece.GetType().Name[0].ToString();
+    if (piece is Knight)
+        pieceName = "N";
+
+    // Determine the file and rank of the destination square
+    string destination = $"{(char)('a' + endCol)}{8 - endRow}";
+
+    // Handle captures
+    if (isCapture)
+    {
+        if (piece is Pawn)
+        {
+            // For pawns, include the starting file
+            return $"{(char)('a' + startCol)}x{destination}";
+        }
+        else
+        {
+            // For other pieces, include the "x" and destination
+            return $"{pieceName}x{destination}";
+        }
+    }
+    else
+    {
+        // Regular move (no capture)
+        return $"{pieceName}{destination}";
+    }
+}
+
+
+        // Helper method to determine disambiguation if needed
+        private string GetDisambiguation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol)
+        {
+            if (piece is Pawn)
+                return string.Empty; // Pawns don't require disambiguation
+
+            bool sameFile = false, sameRank = false, samePieceConflict = false;
+
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    if (r == startRow && c == startCol)
+                        continue;
+
+                    ChessPiece otherPiece = boardState[r, c];
+                    if (otherPiece?.GetType() == piece.GetType() && otherPiece?.Color == piece.Color)
+                    {
+                        if (otherPiece.IsValidMove(r, c, endRow, endCol, boardState))
+                        {
+                            samePieceConflict = true;
+                            if (r == startRow)
+                                sameRank = true;
+                            if (c == startCol)
+                                sameFile = true;
+                        }
+                    }
+                }
+            }
+
+            if (!samePieceConflict)
+                return string.Empty; // No disambiguation needed
+
+            if (sameRank && sameFile)
+                return $"{(char)('a' + startCol)}{8 - startRow}"; // Use both rank and file
+            else if (sameFile)
+                return $"{8 - startRow}"; // Use rank only
+            else
+                return $"{(char)('a' + startCol)}"; // Use file only
+        }
+
+        // Example placeholders for IsCheck and IsCheckmate
+        private bool IsCheck()
+        {
+            // Logic to determine if the move puts the opponent's king in check
+            return false;
+        }
+
+        private bool IsCheckmate()
+        {
+            // Logic to determine if the move checkmates the opponent's king
+            return false;
+        }
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Left)
+            {
+                // Move to the previous FEN if possible
+                if (currentIndex > 0)
+                {
+                    currentIndex--;
+                    UpdateBoardFromCurrentFEN();
+                }
+            }
+            else if (e.Key == Key.Right)
+            {
+                // Move to the next FEN if possible
+                if (currentIndex < FENList.Count - 1)
+                {
+                    currentIndex++;
+                    UpdateBoardFromCurrentFEN();
+                }
+            }
+        }
+        private void UpdateBoardFromCurrentFEN()
+        {
+            // Ensure that the currentIndex is valid
+            if (currentIndex >= 0 && currentIndex < FENList.Count)
+            {
+                // Get the current FEN string
+                string currentFEN = FENList[currentIndex];
+                CreateBoardFromFen(currentFEN); // Call the method to create the board
+                DrawChessBoard();
+                DrawPieces();
+            }
+        }
+        private void CreateBoardFromFen(string fen)
+        {
+            // Split the FEN string to get the board state
+            string[] parts = fen.Split(' ');
+            string boardPart = parts[0]; // The first part contains the board layout
+
+            // Initialize the board (assuming an 8x8 board)
+            ChessPiece[,] boardState = new ChessPiece[8, 8];
+
+            // Split the board part into ranks
+            string[] ranks = boardPart.Split('/');
+
+            for (int rank = 0; rank < 8; rank++)
+            {
+                string currentRank = ranks[rank];
+                int file = 0; // File index
+
+                foreach (char c in currentRank)
+                {
+                    if (char.IsDigit(c))
+                    {
+                        // If the character is a digit, it represents empty squares
+                        int emptySquares = (int)char.GetNumericValue(c);
+                        file += emptySquares; // Move the file index forward
+                    }
+                    else
+                    {
+                        // Use CreatePieceFromChar to get the piece information
+                        List<string> pieceInfo = CreatePieceFromChar(c);
+                        if (pieceInfo != null)
+                        {
+                            // Create the appropriate ChessPiece based on the color and type
+                            string color = pieceInfo[0];
+                            string pieceType = pieceInfo[1];
+
+                            ChessPiece piece = pieceType switch
+                            {
+                                "Rook" => new Rook(color),
+                                "Knight" => new Knight(color),
+                                "Bishop" => new Bishop(color),
+                                "Queen" => new Queen(color),
+                                "King" => new King(color),
+                                "Pawn" => new Pawn(color),
+                            };
+
+                            boardState[rank, file] = piece; // Place the piece on the board
+                            file++; // Move to the next file
+                        }
+                        else
+                        {
+                            boardState[rank, file] = null;
+                        }
+                    }
+                }
+            }
+
+            // Assign the board state to your class variable or property
+            this.boardState = boardState; // Assuming you have a class-level variable for the board
+        }
+
+        private List<string> CreatePieceFromChar(char pieceChar)
+        {
+            List<string> values = new List<string>();
+            // Dictionary to map piece characters to their properties
+            var pieceMap = new Dictionary<char, (string Color, string PieceType)>
+            {
+                { 'r', ("Black", "Rook") },
+                { 'n', ("Black", "Knight") },
+                { 'b', ("Black", "Bishop") },
+                { 'q', ("Black", "Queen") },
+                { 'k', ("Black", "King") },
+                { 'p', ("Black", "Pawn") },
+                { 'R', ("White", "Rook") },
+                { 'N', ("White", "Knight") },
+                { 'B', ("White", "Bishop") },
+                { 'Q', ("White", "Queen") },
+                { 'K', ("White", "King") },
+                { 'P', ("White", "Pawn") }
+            };
+
+            // Check if the character is in the dictionary
+            if (pieceMap.TryGetValue(pieceChar, out var pieceInfo))
+            {
+                // Add the color and piece type to the values list
+                values.Add(pieceInfo.Color);
+                values.Add(pieceInfo.PieceType);
+                return values; // Return the list of values
+            }
+
+            return null; // Unknown piece
+        }
+        private string GenerateFen(ChessPiece[,] boardState)
+        {
+            string fen = "";
+            int boardSize = boardState.GetLength(0); // Assuming a square board
+
+            for (int rank = 0; rank < boardSize; rank++)
+            {
+                int emptyCount = 0;
+                for (int file = 0; file < boardSize; file++)
+                {
+                    ChessPiece piece = boardState[rank, file];
+                    if (piece == null)
+                    {
+                        emptyCount++;
+                    }
+                    else
+                    {
+                        if (emptyCount > 0)
+                        {
+                            fen += emptyCount.ToString(); // Add empty squares count
+                            emptyCount = 0;
+                        }
+
+                        // Declare pieceChar outside the if-else block
+                        char pieceChar;
+
+                        // Append the piece character based on color and type
+                        if (piece.PieceType == "Knight")
+                        {
+                            pieceChar = 'N'; // Use 'N' for Knight
+                        }
+                        else
+                        {
+                            pieceChar = piece.PieceType[0]; // Assuming PieceType is a string like "Pawn", "Bishop", etc.
+                        }
+
+                        // Append the character to the FEN string based on color
+                        if (piece.Color == "White")
+                        {
+                            fen += char.ToUpper(pieceChar); // Uppercase for white pieces
+                        }
+                        else
+                        {
+                            fen += char.ToLower(pieceChar); // Lowercase for black pieces
+                        }
+                    }
+                }
+                if (emptyCount > 0)
+                {
+                    fen += emptyCount.ToString(); // Add remaining empty squares count
+                }
+                if (rank < boardSize - 1)
+                {
+                    fen += "/"; // Separate ranks
+                }
+            }
+
+            // Add additional FEN components (active color, castling rights, en passant, etc.)
+            fen += " w KQkq - 0 1"; // Example: assuming white to move, all castling rights, no en passant, halfmove clock 0, fullmove number 1
+
+            return fen;
         }
         private void HighlightValidMoves(int row, int col)
         {
@@ -341,8 +676,6 @@ namespace ChessSharp
             turnNum++;
 
             // Update status to show whose turn it is
-
-            UpdateStatus($"it is Turn Number: {turnNum}");
         }
         private void PromotePawn(Pawn pawn, int toRow, int toCol)
         {
@@ -648,6 +981,12 @@ namespace ChessSharp
     {
         // This will hold all the moves made in the game
         public static List<Move> MoveHistory = new List<Move>();
+    }
+    public class ChessMove
+    {
+        public int TurnNumber { get; set; }
+        public string WhiteMove { get; set; }
+        public string BlackMove { get; set; }
     }
 
 }
