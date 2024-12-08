@@ -22,12 +22,10 @@ namespace ChessSharp
             InitializeComponent();
             InitializeChessBoard();
         }
-
         private void UpdateStatus(string message)
         {
             StatusItem.Content = message;
         }
-
         private void InitializeChessBoard()
         {
             try
@@ -51,9 +49,7 @@ namespace ChessSharp
                 UpdateStatus($"Error initializing chess board: {ex.Message}");
             }
         }
-
-        private void InitializeBoardState()
-        {
+        private void InitializeBoardState() =>
             // Initialize the board with ChessPiece objects
             boardState = new ChessPiece[BoardSize, BoardSize]
             {
@@ -66,24 +62,23 @@ namespace ChessSharp
                 { new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White") },
                 { new Rook("White"), new Knight("White"), new Bishop("White"), new Queen("White"), new King("White"), new Bishop("White"), new Knight("White"), new Rook("White") }
             };
-        }
         private void PerformCastling(King king, int fromRow, int fromCol, int toRow, int toCol)
-{
-    // Move the king
-    boardState[toRow, toCol] = king;
-    boardState[fromRow, fromCol] = null;
-    king.HasMoved = true;
+        {
+            // Move the king
+            boardState[toRow, toCol] = king;
+            boardState[fromRow, fromCol] = null;
+            king.HasMoved = true;
 
-    // Determine if kingside or queenside castling
-    int rookFromCol = toCol > fromCol ? fromCol + 3 : fromCol - 4; // Rook's starting column
-    int rookToCol = toCol > fromCol ? toCol - 1 : toCol + 1;       // Rook's ending column
+            // Determine if kingside or queenside castling
+            int rookFromCol = toCol > fromCol ? fromCol + 3 : fromCol - 4; // Rook's starting column
+            int rookToCol = toCol > fromCol ? toCol - 1 : toCol + 1;       // Rook's ending column
 
-    // Move the rook
-    ChessPiece rook = boardState[fromRow, rookFromCol];
-    boardState[fromRow, rookToCol] = rook;
-    boardState[fromRow, rookFromCol] = null;
-    rook.HasMoved = true;
-}   
+            // Move the rook
+            ChessPiece rook = boardState[fromRow, rookFromCol];
+            boardState[fromRow, rookToCol] = rook;
+            boardState[fromRow, rookFromCol] = null;
+            rook.HasMoved = true;
+        }
         private void DrawChessBoard()
         {
             bool isWhite = false;
@@ -112,7 +107,6 @@ namespace ChessSharp
                 isWhite = !isWhite;
             }
         }
-
         private void DrawPieces()
         {
             for (int row = 0; row < BoardSize; row++)
@@ -127,7 +121,6 @@ namespace ChessSharp
                 }
             }
         }
-
         private void AddPiece(ChessPiece piece, int row, int col)
         {
             try
@@ -147,7 +140,7 @@ namespace ChessSharp
                     Width = SquareSize,
                     Height = SquareSize
                 };
-                
+
                 Canvas.SetLeft(pieceImage, col * SquareSize);
                 Canvas.SetTop(pieceImage, row * SquareSize);
                 chessBoard.Children.Add(pieceImage);
@@ -157,7 +150,6 @@ namespace ChessSharp
                 UpdateStatus($"Error adding piece {piece.PieceType} at ({row}, {col}): {ex.Message}");
             }
         }
-
         private void OnSquareClick(int row, int col)
         {
             try
@@ -176,7 +168,6 @@ namespace ChessSharp
                 UpdateStatus($"Error handling square click: {ex.Message}");
             }
         }
-
         private void SelectPiece(int row, int col)
         {
             if (boardState[row, col] != null)
@@ -192,13 +183,12 @@ namespace ChessSharp
                 {
                     HighlightValidMoves(row, col);
                 }
-                }
+            }
             else
             {
                 UpdateStatus("No piece at the clicked square.");
             }
         }
-
         private void MoveSelectedPiece(int row, int col)
         {
             var (selectedRow, selectedCol) = selectedPiece.Value;
@@ -212,9 +202,11 @@ namespace ChessSharp
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
+
                     }
                     else
                     {
+
                         MovePiece(selectedRow, selectedCol, row, col);
                     }
                     selectedPieceObject.HasMoved = true;
@@ -225,10 +217,12 @@ namespace ChessSharp
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
+
                     }
                     else
                     {
                         MovePiece(selectedRow, selectedCol, row, col);
+
                     }
                     selectedPieceObject.HasMoved = true;
                     SwitchTurn(); // Switch turn after each valid move
@@ -271,9 +265,6 @@ namespace ChessSharp
             ClearHighlights(); // Clear highlights after completing the move
             selectedPiece = null; // Deselect after the move
         }
-
-
-
         private void HighlightValidMoves(int row, int col)
         {
             for (int r = 0; r < BoardSize; r++)
@@ -282,22 +273,34 @@ namespace ChessSharp
                 {
                     if (boardState[row, col]?.IsValidMove(row, col, r, c, boardState) == true)
                     {
-                        var highlight = new Rectangle
+                        var highlight = new Ellipse
                         {
-                            Width = SquareSize,
-                            Height = SquareSize,
-                            Fill = Brushes.Yellow,
-                            Opacity = 0.5
+                            Width = SquareSize / 3, // Adjust size to your preference
+                            Height = SquareSize / 3,
+                            Opacity = 0.4
                         };
 
-                        Canvas.SetLeft(highlight, c * SquareSize);
-                        Canvas.SetTop(highlight, r * SquareSize);
+                        // Check if the square contains an opponent's piece
+                        ChessPiece targetPiece = boardState[r, c];
+                        if (targetPiece != null && targetPiece.Color != boardState[row, col]?.Color)
+                        {
+                            // Red circle for opponent's piece
+                            highlight.Fill = Brushes.Red;
+                        }
+                        else
+                        {
+                            // Black circle for valid move
+                            highlight.Fill = Brushes.Black;
+                        }
+
+                        // Position the circle in the center of the square
+                        Canvas.SetLeft(highlight, c * SquareSize + (SquareSize - highlight.Width) / 2);
+                        Canvas.SetTop(highlight, r * SquareSize + (SquareSize - highlight.Height) / 2);
                         chessBoard.Children.Add(highlight);
                     }
                 }
             }
         }
-
         private void MovePiece(int fromRow, int fromCol, int toRow, int toCol)
         {
             ChessPiece piece = boardState[fromRow, fromCol];
@@ -309,14 +312,12 @@ namespace ChessSharp
             DrawPieces();
             UpdateStatus("Piece moved and board redrawn.");
         }
-
         private void ClearHighlights()
         {
             chessBoard.Children.Clear();
             DrawChessBoard();
             DrawPieces();
         }
-
         private void ChessBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             Point mousePos = e.GetPosition(ChessBoardCanvas);
@@ -330,12 +331,27 @@ namespace ChessSharp
             turnNum++;
 
             // Update status to show whose turn it is
-            
+
             UpdateStatus($"it is Turn Number: {turnNum}");
         }
+        private void PromotePawn(Pawn pawn, int toRow, int toCol)
+        {
+            // Check for pawn promotion: White pawn reaches the 0th row, Black pawn reaches the 7th row
+            if (pawn.Color == "White" && toRow == 0)
+            {
+                // Promote to Queen (you can customize to allow other pieces)
+                ChessPiece promotedQueen = new Queen("White");
+                AddPiece(promotedQueen, toRow, toCol); // Add the new Queen to the board
+            }
+            else if (pawn.Color == "Black" && toRow == 7)
+            {
+                // Promote to Queen (you can customize to allow other pieces)
+                ChessPiece promotedQueen = new Queen("Black");
+                AddPiece(promotedQueen, toRow, toCol); // Add the new Queen to the board
+            }
+        }
     }
-
-    public abstract class ChessPiece
+        public abstract class ChessPiece
     {
         public string Color { get; set; }
         public bool HasMoved { get; set; }  // Track if the piece has moved
@@ -358,29 +374,76 @@ namespace ChessSharp
         {
             if (Color == "White")
             {
-                // White pawn can move 1 step forward always as long as no piece is in the way
+                // Regular move for white pawn (one step forward)
                 if (fromRow - 1 == toRow && fromCol == toCol && boardState[toRow, toCol] == null)
                     return true;
-                // White pawn can capture diagonally
+
+                // Regular diagonal capture
                 if (fromRow - 1 == toRow && Math.Abs(fromCol - toCol) == 1 && boardState[toRow, toCol]?.Color == "Black")
                     return true;
-                // Pawns can move two squares on their first move.
-                if (fromRow - 2 == toRow && fromCol == toCol && boardState[toRow, toCol] == null && HasMoved == false) 
+
+                // White pawn initial double move (only from row 6 to 4)
+                if (fromRow == 6 && fromRow - 2 == toRow && fromCol == toCol && boardState[toRow, toCol] == null)
+                {
+                    // Record the move
+                    MoveHistoryManager.MoveHistory.Add(new Move(this, fromRow, fromCol, toRow, toCol, "White"));
                     return true;
-                
+                }
             }
             else if (Color == "Black")
             {
-                // Black pawn can move 1 step forward
+                // Regular move for black pawn (one step forward)
                 if (fromRow + 1 == toRow && fromCol == toCol && boardState[toRow, toCol] == null)
                     return true;
-                // Black pawn can capture diagonally
+
+                // Regular diagonal capture
                 if (fromRow + 1 == toRow && Math.Abs(fromCol - toCol) == 1 && boardState[toRow, toCol]?.Color == "White")
-                    return true;// Pawns can move two squares on their first move.
-                if (fromRow + 2 == toRow && fromCol == toCol && boardState[toRow, toCol] == null && HasMoved == false)
                     return true;
+
+                // Black pawn initial double move (only from row 1 to 3)
+                if (fromRow == 1 && fromRow + 2 == toRow && fromCol == toCol && boardState[toRow, toCol] == null)
+                {
+                    // Record the move
+                    MoveHistoryManager.MoveHistory.Add(new Move(this, fromRow, fromCol, toRow, toCol, "Black"));
+                    return true;
+                }
             }
 
+            // Check for en passant
+            return CanCaptureEnPassant(fromRow, fromCol, toRow, toCol, boardState);
+        }
+
+        private bool CanCaptureEnPassant(int fromRow, int fromCol, int toRow, int toCol, ChessPiece[,] boardState)
+        {
+            if (MoveHistoryManager.MoveHistory.Count == 0)
+                return false;
+
+            // Get the last move from the history
+            var lastMove = MoveHistoryManager.MoveHistory.Last();
+
+            // En Passant is possible if the last move was a 2-square move by an opponent's pawn
+            if (Math.Abs(lastMove.ToRow - lastMove.FromRow) == 2 &&
+                lastMove.Piece is Pawn &&
+                lastMove.PlayerColor != this.Color && // Check opponent's move
+                lastMove.ToRow == fromRow &&
+                Math.Abs(lastMove.ToCol - fromCol) == 1)
+            {
+                // Check if en passant is possible
+                if (boardState[toRow, toCol] == null)
+                {
+                    // Capture the opponent's pawn as if it had moved one square
+                    boardState[lastMove.ToRow, lastMove.ToCol] = null; // Remove the pawn that moved two squares
+                    if (this.Color == "Black" && toRow == fromRow + 1 && (toCol == lastMove.FromCol) )
+                    {
+                        return true;
+                    }
+                    else if (this.Color == "White" && toRow == fromRow - 1 && (toCol == lastMove.FromCol))
+                    {
+                        return true;
+                    }
+
+                }
+            }
             return false;
         }
     }
@@ -557,6 +620,30 @@ namespace ChessSharp
             BoardState[7, 7] = new Rook("White");
             for (int i = 0; i < 8; i++) BoardState[6, i] = new Pawn("White");
         }
+    }
+    public class Move
+    {
+        public ChessPiece Piece { get; set; }
+        public int FromRow { get; set; }
+        public int FromCol { get; set; }
+        public int ToRow { get; set; }
+        public int ToCol { get; set; }
+        public string PlayerColor { get; set; }
+
+        public Move(ChessPiece piece, int fromRow, int fromCol, int toRow, int toCol, string playerColor)
+        {
+            Piece = piece;
+            FromRow = fromRow;
+            FromCol = fromCol;
+            ToRow = toRow;
+            ToCol = toCol;
+            PlayerColor = playerColor;
+        }
+    }
+    public static class MoveHistoryManager
+    {
+        // This will hold all the moves made in the game
+        public static List<Move> MoveHistory = new List<Move>();
     }
 
 }
