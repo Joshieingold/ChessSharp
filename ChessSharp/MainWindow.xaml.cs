@@ -67,7 +67,23 @@ namespace ChessSharp
                 { new Rook("White"), new Knight("White"), new Bishop("White"), new Queen("White"), new King("White"), new Bishop("White"), new Knight("White"), new Rook("White") }
             };
         }
+        private void PerformCastling(King king, int fromRow, int fromCol, int toRow, int toCol)
+{
+    // Move the king
+    boardState[toRow, toCol] = king;
+    boardState[fromRow, fromCol] = null;
+    king.HasMoved = true;
 
+    // Determine if kingside or queenside castling
+    int rookFromCol = toCol > fromCol ? fromCol + 3 : fromCol - 4; // Rook's starting column
+    int rookToCol = toCol > fromCol ? toCol - 1 : toCol + 1;       // Rook's ending column
+
+    // Move the rook
+    ChessPiece rook = boardState[fromRow, rookFromCol];
+    boardState[fromRow, rookToCol] = rook;
+    boardState[fromRow, rookFromCol] = null;
+    rook.HasMoved = true;
+}   
         private void DrawChessBoard()
         {
             bool isWhite = false;
@@ -116,7 +132,7 @@ namespace ChessSharp
         {
             try
             {
-                string imagePath = "unset";
+                string imagePath = "initialize";
                 if (piece.PieceType == "Knight")
                 {
                     imagePath = $"/Images/{piece.Color[0].ToString().ToLower()}N.png";
@@ -173,8 +189,8 @@ namespace ChessSharp
                     HighlightValidMoves(row, col);
                 }
                 else if (selectedPieceObject.Color == "Black" && turnNum % 2 == 0)
-                { 
-                
+                {
+                    HighlightValidMoves(row, col);
                 }
                 }
             else
@@ -187,29 +203,76 @@ namespace ChessSharp
         {
             var (selectedRow, selectedCol) = selectedPiece.Value;
             ChessPiece selectedPieceObject = boardState[selectedRow, selectedCol];
+
+            // Check if the move is valid
             if (selectedPieceObject.IsValidMove(selectedRow, selectedCol, row, col, boardState))
             {
                 if (selectedPieceObject.Color == "White" && turnNum % 2 != 0)
                 {
-                    MovePiece(selectedRow, selectedCol, row, col);
+                    if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
+                    {
+                        PerformCastling(king, selectedRow, selectedCol, row, col);
+                    }
+                    else
+                    {
+                        MovePiece(selectedRow, selectedCol, row, col);
+                    }
                     selectedPieceObject.HasMoved = true;
-                    SwitchTurn();  // Switch turn after each valid move
+                    SwitchTurn(); // Switch turn after each valid move
                 }
                 else if (selectedPieceObject.Color == "Black" && turnNum % 2 == 0)
                 {
-                    MovePiece(selectedRow, selectedCol, row, col);
+                    if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
+                    {
+                        PerformCastling(king, selectedRow, selectedCol, row, col);
+                    }
+                    else
+                    {
+                        MovePiece(selectedRow, selectedCol, row, col);
+                    }
                     selectedPieceObject.HasMoved = true;
-                    SwitchTurn();  // Switch turn after each valid move
+                    SwitchTurn(); // Switch turn after each valid move
                 }
                 else
                 {
+                    return; // Invalid turn for the piece color
+                }
+            }
+            else
+            {
+                // Handle invalid move by selecting a new piece if one exists
+                ChessPiece clickedPiece = boardState[row, col];
+                if (clickedPiece != null)
+                {
+                    // Check if the clicked piece belongs to the current turn
+                    if ((clickedPiece.Color == "White" && turnNum % 2 != 0) ||
+                        (clickedPiece.Color == "Black" && turnNum % 2 == 0))
+                    {
+                        selectedPiece = (row, col); // Update selected piece
+                        ClearHighlights();
+                        HighlightValidMoves(row, col); // Highlight valid moves for the newly selected piece
+                        return; // Exit after selecting the new piece
+                    }
+                    else
+                    {
+                        selectedPiece = null; // Deselect if the piece doesn't match the turn
+                        ClearHighlights(); // Clear highlights
+                        return;
+                    }
+                }
+                else
+                {
+                    selectedPiece = null; // Deselect if no piece is clicked
+                    ClearHighlights(); // Clear highlights
                     return;
                 }
-
             }
-            ClearHighlights();
-            selectedPiece = null;
+
+            ClearHighlights(); // Clear highlights after completing the move
+            selectedPiece = null; // Deselect after the move
         }
+
+
 
         private void HighlightValidMoves(int row, int col)
         {
@@ -358,10 +421,52 @@ namespace ChessSharp
 
         public override bool IsValidMove(int fromRow, int fromCol, int toRow, int toCol, ChessPiece[,] boardState)
         {
-            if (boardState[toRow, toCol] != null && boardState[toRow, toCol].Color == Color)
+            // Normal king move: 1 square in any direction
+            if (Math.Abs(fromRow - toRow) <= 1 && Math.Abs(fromCol - toCol) <= 1)
+            {
+                // Ensure the destination is either empty or occupied by an opponent's piece
+                return boardState[toRow, toCol] == null || boardState[toRow, toCol].Color != Color;
+            }
+
+            // Castling move
+            if (!HasMoved && fromRow == toRow) // King hasn't moved and stays in the same row
+            {
+                // Check if castling is to the right (kingside)
+                if (toCol == fromCol + 2)
+                {
+                    return CanCastle(fromRow, fromCol, fromCol + 3, boardState);
+                }
+                // Check if castling is to the left (queenside)
+                else if (toCol == fromCol - 2)
+                {
+                    return CanCastle(fromRow, fromCol, fromCol - 4, boardState);
+                }
+            }
+
+            return false;
+        }
+
+        private bool CanCastle(int kingRow, int kingCol, int rookCol, ChessPiece[,] boardState)
+        {
+            // Ensure the rook is in the correct position and hasn't moved
+            if (boardState[kingRow, rookCol] is not Rook rook || rook.HasMoved || rook.Color != Color)
+            {
                 return false;
-            // King can move 1 square in any direction
-            return Math.Abs(fromRow - toRow) <= 1 && Math.Abs(fromCol - toCol) <= 1;
+            }
+
+            // Ensure all squares between the king and the rook are empty
+            int step = rookCol > kingCol ? 1 : -1;
+            for (int col = kingCol + step; col != rookCol; col += step)
+            {
+                if (boardState[kingRow, col] != null)
+                {
+                    return false;
+                }
+            }
+
+            // TODO: Add checks for the king not being in check, passing through check, or ending in check
+            
+            return true;
         }
     }
     public class Queen : ChessPiece
