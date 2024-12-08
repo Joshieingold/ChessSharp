@@ -202,11 +202,16 @@ namespace ChessSharp
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
-
+                    }
+                    else if (selectedPieceObject is Pawn pawn && Math.Abs(selectedCol - col) == 1 && boardState[row, col] == null)
+                    {
+                        // Handle en passant capture for White
+                        int capturedRow = row + 1; // En passant target is one row below the destination
+                        boardState[capturedRow, col] = null; // Remove the captured pawn
+                        MovePiece(selectedRow, selectedCol, row, col);
                     }
                     else
                     {
-
                         MovePiece(selectedRow, selectedCol, row, col);
                     }
                     selectedPieceObject.HasMoved = true;
@@ -217,12 +222,17 @@ namespace ChessSharp
                     if (selectedPieceObject is King king && Math.Abs(col - selectedCol) == 2)
                     {
                         PerformCastling(king, selectedRow, selectedCol, row, col);
-
+                    }
+                    else if (selectedPieceObject is Pawn pawn && Math.Abs(selectedCol - col) == 1 && boardState[row, col] == null)
+                    {
+                        // Handle en passant capture for Black
+                        int capturedRow = row - 1; // En passant target is one row above the destination
+                        boardState[capturedRow, col] = null; // Remove the captured pawn
+                        MovePiece(selectedRow, selectedCol, row, col);
                     }
                     else
                     {
                         MovePiece(selectedRow, selectedCol, row, col);
-
                     }
                     selectedPieceObject.HasMoved = true;
                     SwitchTurn(); // Switch turn after each valid move
@@ -262,7 +272,7 @@ namespace ChessSharp
                 }
             }
 
-            ClearHighlights(); // Clear highlights after completing the move
+        ClearHighlights(); // Clear highlights after completing the move
             selectedPiece = null; // Deselect after the move
         }
         private void HighlightValidMoves(int row, int col)
@@ -425,27 +435,21 @@ namespace ChessSharp
             if (Math.Abs(lastMove.ToRow - lastMove.FromRow) == 2 &&
                 lastMove.Piece is Pawn &&
                 lastMove.PlayerColor != this.Color && // Check opponent's move
-                lastMove.ToRow == fromRow &&
-                Math.Abs(lastMove.ToCol - fromCol) == 1)
+                lastMove.ToRow == fromRow && // Last move ended at the current pawn's row
+                Math.Abs(lastMove.ToCol - fromCol) == 1) // Last move was adjacent to the current pawn
             {
-                // Check if en passant is possible
-                if (boardState[toRow, toCol] == null)
+                // Check if the current move is an en passant move
+                if ((this.Color == "Black" && toRow == fromRow + 1 && toCol == lastMove.FromCol) ||
+                    (this.Color == "White" && toRow == fromRow - 1 && toCol == lastMove.FromCol))
                 {
-                    // Capture the opponent's pawn as if it had moved one square
-                    boardState[lastMove.ToRow, lastMove.ToCol] = null; // Remove the pawn that moved two squares
-                    if (this.Color == "Black" && toRow == fromRow + 1 && (toCol == lastMove.FromCol) )
-                    {
-                        return true;
-                    }
-                    else if (this.Color == "White" && toRow == fromRow - 1 && (toCol == lastMove.FromCol))
-                    {
-                        return true;
-                    }
-
+                    // Do not modify the board here; just return true to indicate a valid en passant move
+                    return true;
                 }
             }
+
             return false;
         }
+
     }
     public class Rook : ChessPiece
     {
