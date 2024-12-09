@@ -12,6 +12,7 @@ namespace ChessSharp
 {
     public partial class MainWindow : Window
     {
+        // Global variables.
         private const int BoardSize = 8;
         private const double SquareSize = 60;
         private Canvas chessBoard;
