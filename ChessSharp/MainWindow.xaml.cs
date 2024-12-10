@@ -28,80 +28,13 @@ namespace ChessSharp
             InitializeChessBoard();
             ScoreSheetListBox.ItemsSource = MoveHistory;
         }
-        private void RecordMove(int turnNumber, string whiteMove, string blackMove) // Adds move number, and the move made to the movehistory, stored as a class (ChessMove)
-        {
-            // Add a new move to the history
-            MoveHistory.Add(new ChessMove
-            {
-                TurnNumber = turnNumber,
-                WhiteMove = whiteMove,
-                BlackMove = blackMove
-            });
-        }
-        private void ClearScoreSheet_Click(object sender, RoutedEventArgs e)
-        {
-            // Clear the move history
-            MoveHistory.Clear();
-        }
-        private void UpdateStatus(string message)
-        {
-            StatusItem.Content = message;
-        }
-        private void InitializeChessBoard()
-        {
-            try
-            {
-                chessBoard = new Canvas
-                {
-                    Width = BoardSize * SquareSize,
-                    Height = BoardSize * SquareSize
-                };
 
-                var boardCanvas = (Canvas)this.FindName("ChessBoardCanvas");
-                boardCanvas.Children.Add(chessBoard);
 
-                InitializeBoardState();
-                DrawChessBoard();
-                DrawPieces();
-                string fen = GenerateFen(boardState);
-                FENList.Add(fen); // Add the FEN string to the list
-                UpdateStatus("Chess board initialized successfully.");
-
-            }
-            catch (Exception ex)
-            {
-                UpdateStatus($"Error initializing chess board: {ex.Message}");
-            }
-        }
-        private void InitializeBoardState() =>
-            // Initialize the board with ChessPiece objects
-            boardState = new ChessPiece[BoardSize, BoardSize]
-            {
-                { new Rook("Black"), new Knight("Black"), new Bishop("Black"), new Queen("Black"), new King("Black"), new Bishop("Black"), new Knight("Black"), new Rook("Black") },
-                { new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black") },
-                { null, null, null, null, null, null, null, null },
-                { null, null, null, null, null, null, null, null },
-                { null, null, null, null, null, null, null, null },
-                { null, null, null, null, null, null, null, null },
-                { new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White") },
-                { new Rook("White"), new Knight("White"), new Bishop("White"), new Queen("White"), new King("White"), new Bishop("White"), new Knight("White"), new Rook("White") }
-            };
-        private void PerformCastling(King king, int fromRow, int fromCol, int toRow, int toCol)
+        // Omnipresent Functions
+        private void RemakeBoard()
         {
-            // Move the king
-            boardState[toRow, toCol] = king;
-            boardState[fromRow, fromCol] = null;
-            king.HasMoved = true;
-
-            // Determine if kingside or queenside castling
-            int rookFromCol = toCol > fromCol ? fromCol + 3 : fromCol - 4; // Rook's starting column
-            int rookToCol = toCol > fromCol ? toCol - 1 : toCol + 1;       // Rook's ending column
-
-            // Move the rook
-            ChessPiece rook = boardState[fromRow, rookFromCol];
-            boardState[fromRow, rookToCol] = rook;
-            boardState[fromRow, rookFromCol] = null;
-            rook.HasMoved = true;
+            DrawChessBoard();
+            DrawPieces();
         }
         private void DrawChessBoard()
         {
@@ -174,6 +107,178 @@ namespace ChessSharp
                 UpdateStatus($"Error adding piece {piece.PieceType} at ({row}, {col}): {ex.Message}");
             }
         }
+        
+        // Start-up
+        private void InitializeChessBoard()
+        {
+            try
+            {
+                chessBoard = new Canvas
+                {
+                    Width = BoardSize * SquareSize,
+                    Height = BoardSize * SquareSize
+                };
+
+                var boardCanvas = (Canvas)this.FindName("ChessBoardCanvas");
+                boardCanvas.Children.Add(chessBoard);
+
+                InitializeBoardState();
+                RemakeBoard();
+                string fen = GenerateFen(boardState);
+                FENList.Add(fen); // Add the FEN string to the list
+                UpdateStatus("Chess board initialized successfully.");
+
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"Error initializing chess board: {ex.Message}");
+            }
+        }
+        private void InitializeBoardState() =>
+            // Initialize the board with ChessPiece objects
+            boardState = new ChessPiece[BoardSize, BoardSize]
+            {
+                { new Rook("Black"), new Knight("Black"), new Bishop("Black"), new Queen("Black"), new King("Black"), new Bishop("Black"), new Knight("Black"), new Rook("Black") },
+                { new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black"), new Pawn("Black") },
+                { null, null, null, null, null, null, null, null },
+                { null, null, null, null, null, null, null, null },
+                { null, null, null, null, null, null, null, null },
+                { null, null, null, null, null, null, null, null },
+                { new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White"), new Pawn("White") },
+                { new Rook("White"), new Knight("White"), new Bishop("White"), new Queen("White"), new King("White"), new Bishop("White"), new Knight("White"), new Rook("White") }
+            };
+        // Key Controls
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Left)
+            {
+                // Move to the previous FEN if possible
+                if (currentIndex > 0)
+                {
+                    currentIndex--;
+                    UpdateBoardFromCurrentFEN();
+                }
+            }
+            else if (e.Key == Key.Right)
+            {
+                // Move to the next FEN if possible
+                if (currentIndex < FENList.Count - 1)
+                {
+                    currentIndex++;
+                    UpdateBoardFromCurrentFEN();
+                }
+            }
+        }
+        private void UpdateBoardFromCurrentFEN()
+        {
+            // Ensure that the currentIndex is valid
+            if (currentIndex >= 0 && currentIndex < FENList.Count)
+            {
+                // Get the current FEN string
+                string currentFEN = FENList[currentIndex];
+                CreateBoardFromFen(currentFEN); // Call the method to create the board
+                RemakeBoard();
+            }
+        }
+        private void CreateBoardFromFen(string fen)
+        {
+            // Split the FEN string to get the board state
+            string[] parts = fen.Split(' ');
+            string boardPart = parts[0]; // The first part contains the board layout
+
+            // Initialize the board (assuming an 8x8 board)
+            ChessPiece[,] boardState = new ChessPiece[8, 8];
+
+            // Split the board part into ranks
+            string[] ranks = boardPart.Split('/');
+
+            for (int rank = 0; rank < 8; rank++)
+            {
+                string currentRank = ranks[rank];
+                int file = 0; // File index
+
+                foreach (char c in currentRank)
+                {
+                    if (char.IsDigit(c))
+                    {
+                        // If the character is a digit, it represents empty squares
+                        int emptySquares = (int)char.GetNumericValue(c);
+                        file += emptySquares; // Move the file index forward
+                    }
+                    else
+                    {
+                        // Use CreatePieceFromChar to get the piece information
+                        List<string> pieceInfo = CreatePieceFromChar(c);
+                        if (pieceInfo != null)
+                        {
+                            // Create the appropriate ChessPiece based on the color and type
+                            string color = pieceInfo[0];
+                            string pieceType = pieceInfo[1];
+
+                            ChessPiece piece = pieceType switch
+                            {
+                                "Rook" => new Rook(color),
+                                "Knight" => new Knight(color),
+                                "Bishop" => new Bishop(color),
+                                "Queen" => new Queen(color),
+                                "King" => new King(color),
+                                "Pawn" => new Pawn(color),
+                            };
+
+                            boardState[rank, file] = piece; // Place the piece on the board
+                            file++; // Move to the next file
+                        }
+                        else
+                        {
+                            boardState[rank, file] = null;
+                        }
+                    }
+                }
+            }
+
+            // Assign the board state to your class variable or property
+            this.boardState = boardState; // Assuming you have a class-level variable for the board
+        }
+        private List<string> CreatePieceFromChar(char pieceChar)
+        {
+            List<string> values = new List<string>();
+            // Dictionary to map piece characters to their properties
+            var pieceMap = new Dictionary<char, (string Color, string PieceType)>
+            {
+                { 'r', ("Black", "Rook") },
+                { 'n', ("Black", "Knight") },
+                { 'b', ("Black", "Bishop") },
+                { 'q', ("Black", "Queen") },
+                { 'k', ("Black", "King") },
+                { 'p', ("Black", "Pawn") },
+                { 'R', ("White", "Rook") },
+                { 'N', ("White", "Knight") },
+                { 'B', ("White", "Bishop") },
+                { 'Q', ("White", "Queen") },
+                { 'K', ("White", "King") },
+                { 'P', ("White", "Pawn") }
+            };
+
+            // Check if the character is in the dictionary
+            if (pieceMap.TryGetValue(pieceChar, out var pieceInfo))
+            {
+                // Add the color and piece type to the values list
+                values.Add(pieceInfo.Color);
+                values.Add(pieceInfo.PieceType);
+                return values; // Return the list of values
+            }
+
+            return null; // Unknown piece
+        }
+
+        // Gameplay / Rules
+        private void ChessBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Point mousePos = e.GetPosition(ChessBoardCanvas);
+            int row = (int)(mousePos.Y / SquareSize);
+            int col = (int)(mousePos.X / SquareSize);
+            OnSquareClick(row, col);
+        }
         private void OnSquareClick(int row, int col)
         {
             try
@@ -213,6 +318,42 @@ namespace ChessSharp
                 UpdateStatus("No piece at the clicked square.");
             }
         }
+        private void HighlightValidMoves(int row, int col)
+        {
+            for (int r = 0; r < BoardSize; r++)
+            {
+                for (int c = 0; c < BoardSize; c++)
+                {
+                    if (boardState[row, col]?.IsValidMove(row, col, r, c, boardState) == true)
+                    {
+                        var highlight = new Ellipse
+                        {
+                            Width = SquareSize / 3, // Adjust size to your preference
+                            Height = SquareSize / 3,
+                            Opacity = 0.4
+                        };
+
+                        // Check if the square contains an opponent's piece
+                        ChessPiece targetPiece = boardState[r, c];
+                        if (targetPiece != null && targetPiece.Color != boardState[row, col]?.Color)
+                        {
+                            // Red circle for opponent's piece
+                            highlight.Fill = Brushes.Red;
+                        }
+                        else
+                        {
+                            // Black circle for valid move
+                            highlight.Fill = Brushes.Black;
+                        }
+
+                        // Position the circle in the center of the square
+                        Canvas.SetLeft(highlight, c * SquareSize + (SquareSize - highlight.Width) / 2);
+                        Canvas.SetTop(highlight, r * SquareSize + (SquareSize - highlight.Height) / 2);
+                        chessBoard.Children.Add(highlight);
+                    }
+                }
+            }
+        }
         private void MoveSelectedPiece(int row, int col)
         {
             var (selectedRow, selectedCol) = selectedPiece.Value;
@@ -221,7 +362,7 @@ namespace ChessSharp
             // Check if the move is valid
             if (selectedPieceObject.IsValidMove(selectedRow, selectedCol, row, col, boardState))
             {
-                
+
                 string moveNotation = GetMoveNotation(selectedPieceObject, selectedRow, selectedCol, row, col, isCapture);
                 if (selectedPieceObject.Color == "White" && turnNum % 2 != 0)
                 {
@@ -334,212 +475,52 @@ namespace ChessSharp
             ClearHighlights(); // Clear highlights after completing the move
             selectedPiece = null; // Deselect after the move
         }
-        // Helper to generate move notation
         private string GetMoveNotation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol, bool isCapture)
-{
-    // Get the piece notation (e.g., "N" for Knight, empty for Pawn)
-    string pieceName = piece is Pawn ? string.Empty : piece.GetType().Name[0].ToString();
-    if (piece is Knight)
-        pieceName = "N";
-
-    // Determine the file and rank of the destination square
-    string destination = $"{(char)('a' + endCol)}{8 - endRow}";
-
-    // Handle captures
-    if (isCapture)
-    {
-        if (piece is Pawn)
         {
-            // For pawns, include the starting file
-            return $"{(char)('a' + startCol)}x{destination}";
-        }
-        else
-        {
-            // For other pieces, include the "x" and destination
-            return $"{pieceName}x{destination}";
-        }
-    }
-    else
-    {
-        // Regular move (no capture)
-        return $"{pieceName}{destination}";
-    }
-}
-        // Helper method to determine disambiguation if needed
-        private string GetDisambiguation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol)
-        {
-            if (piece is Pawn)
-                return string.Empty; // Pawns don't require disambiguation
+            // Get the piece notation (e.g., "N" for Knight, empty for Pawn)
+            string pieceName = piece is Pawn ? string.Empty : piece.GetType().Name[0].ToString();
+            if (piece is Knight)
+                pieceName = "N";
 
-            bool sameFile = false, sameRank = false, samePieceConflict = false;
+            // Determine the file and rank of the destination square
+            string destination = $"{(char)('a' + endCol)}{8 - endRow}";
 
-            for (int r = 0; r < 8; r++)
+            // Handle captures
+            if (isCapture)
             {
-                for (int c = 0; c < 8; c++)
+                if (piece is Pawn)
                 {
-                    if (r == startRow && c == startCol)
-                        continue;
-
-                    ChessPiece otherPiece = boardState[r, c];
-                    if (otherPiece?.GetType() == piece.GetType() && otherPiece?.Color == piece.Color)
-                    {
-                        if (otherPiece.IsValidMove(r, c, endRow, endCol, boardState))
-                        {
-                            samePieceConflict = true;
-                            if (r == startRow)
-                                sameRank = true;
-                            if (c == startCol)
-                                sameFile = true;
-                        }
-                    }
+                    // For pawns, include the starting file
+                    return $"{(char)('a' + startCol)}x{destination}";
+                }
+                else
+                {
+                    // For other pieces, include the "x" and destination
+                    return $"{pieceName}x{destination}";
                 }
             }
-
-            if (!samePieceConflict)
-                return string.Empty; // No disambiguation needed
-
-            if (sameRank && sameFile)
-                return $"{(char)('a' + startCol)}{8 - startRow}"; // Use both rank and file
-            else if (sameFile)
-                return $"{8 - startRow}"; // Use rank only
             else
-                return $"{(char)('a' + startCol)}"; // Use file only
-        }
-        // Example placeholders for IsCheck and IsCheckmate
-        private bool IsCheck()
-        {
-            // Logic to determine if the move puts the opponent's king in check
-            return false;
-        }
-
-        private bool IsCheckmate()
-        {
-            // Logic to determine if the move checkmates the opponent's king
-            return false;
-        }
-        private void Window_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Left)
             {
-                // Move to the previous FEN if possible
-                if (currentIndex > 0)
-                {
-                    currentIndex--;
-                    UpdateBoardFromCurrentFEN();
-                }
-            }
-            else if (e.Key == Key.Right)
-            {
-                // Move to the next FEN if possible
-                if (currentIndex < FENList.Count - 1)
-                {
-                    currentIndex++;
-                    UpdateBoardFromCurrentFEN();
-                }
+                // Regular move (no capture)
+                return $"{pieceName}{destination}";
             }
         }
-        private void UpdateBoardFromCurrentFEN()
+        private void PerformCastling(King king, int fromRow, int fromCol, int toRow, int toCol)
         {
-            // Ensure that the currentIndex is valid
-            if (currentIndex >= 0 && currentIndex < FENList.Count)
-            {
-                // Get the current FEN string
-                string currentFEN = FENList[currentIndex];
-                CreateBoardFromFen(currentFEN); // Call the method to create the board
-                DrawChessBoard();
-                DrawPieces();
-            }
-        }
-        private void CreateBoardFromFen(string fen)
-        {
-            // Split the FEN string to get the board state
-            string[] parts = fen.Split(' ');
-            string boardPart = parts[0]; // The first part contains the board layout
+            // Move the king
+            boardState[toRow, toCol] = king;
+            boardState[fromRow, fromCol] = null;
+            king.HasMoved = true;
 
-            // Initialize the board (assuming an 8x8 board)
-            ChessPiece[,] boardState = new ChessPiece[8, 8];
+            // Determine if kingside or queenside castling
+            int rookFromCol = toCol > fromCol ? fromCol + 3 : fromCol - 4; // Rook's starting column
+            int rookToCol = toCol > fromCol ? toCol - 1 : toCol + 1;       // Rook's ending column
 
-            // Split the board part into ranks
-            string[] ranks = boardPart.Split('/');
-
-            for (int rank = 0; rank < 8; rank++)
-            {
-                string currentRank = ranks[rank];
-                int file = 0; // File index
-
-                foreach (char c in currentRank)
-                {
-                    if (char.IsDigit(c))
-                    {
-                        // If the character is a digit, it represents empty squares
-                        int emptySquares = (int)char.GetNumericValue(c);
-                        file += emptySquares; // Move the file index forward
-                    }
-                    else
-                    {
-                        // Use CreatePieceFromChar to get the piece information
-                        List<string> pieceInfo = CreatePieceFromChar(c);
-                        if (pieceInfo != null)
-                        {
-                            // Create the appropriate ChessPiece based on the color and type
-                            string color = pieceInfo[0];
-                            string pieceType = pieceInfo[1];
-
-                            ChessPiece piece = pieceType switch
-                            {
-                                "Rook" => new Rook(color),
-                                "Knight" => new Knight(color),
-                                "Bishop" => new Bishop(color),
-                                "Queen" => new Queen(color),
-                                "King" => new King(color),
-                                "Pawn" => new Pawn(color),
-                            };
-
-                            boardState[rank, file] = piece; // Place the piece on the board
-                            file++; // Move to the next file
-                        }
-                        else
-                        {
-                            boardState[rank, file] = null;
-                        }
-                    }
-                }
-            }
-
-            // Assign the board state to your class variable or property
-            this.boardState = boardState; // Assuming you have a class-level variable for the board
-        }
-
-        private List<string> CreatePieceFromChar(char pieceChar)
-        {
-            List<string> values = new List<string>();
-            // Dictionary to map piece characters to their properties
-            var pieceMap = new Dictionary<char, (string Color, string PieceType)>
-            {
-                { 'r', ("Black", "Rook") },
-                { 'n', ("Black", "Knight") },
-                { 'b', ("Black", "Bishop") },
-                { 'q', ("Black", "Queen") },
-                { 'k', ("Black", "King") },
-                { 'p', ("Black", "Pawn") },
-                { 'R', ("White", "Rook") },
-                { 'N', ("White", "Knight") },
-                { 'B', ("White", "Bishop") },
-                { 'Q', ("White", "Queen") },
-                { 'K', ("White", "King") },
-                { 'P', ("White", "Pawn") }
-            };
-
-            // Check if the character is in the dictionary
-            if (pieceMap.TryGetValue(pieceChar, out var pieceInfo))
-            {
-                // Add the color and piece type to the values list
-                values.Add(pieceInfo.Color);
-                values.Add(pieceInfo.PieceType);
-                return values; // Return the list of values
-            }
-
-            return null; // Unknown piece
+            // Move the rook
+            ChessPiece rook = boardState[fromRow, rookFromCol];
+            boardState[fromRow, rookToCol] = rook;
+            boardState[fromRow, rookFromCol] = null;
+            rook.HasMoved = true;
         }
         private string GenerateFen(ChessPiece[,] boardState)
         {
@@ -603,41 +584,27 @@ namespace ChessSharp
 
             return fen;
         }
-        private void HighlightValidMoves(int row, int col)
+        private void RecordMove(int turnNumber, string whiteMove, string blackMove) // Adds move number, and the move made to the movehistory, stored as a class (ChessMove)
         {
-            for (int r = 0; r < BoardSize; r++)
+            // Add a new move to the history
+            MoveHistory.Add(new ChessMove
             {
-                for (int c = 0; c < BoardSize; c++)
-                {
-                    if (boardState[row, col]?.IsValidMove(row, col, r, c, boardState) == true)
-                    {
-                        var highlight = new Ellipse
-                        {
-                            Width = SquareSize / 3, // Adjust size to your preference
-                            Height = SquareSize / 3,
-                            Opacity = 0.4
-                        };
+                TurnNumber = turnNumber,
+                WhiteMove = whiteMove,
+                BlackMove = blackMove
+            });
+        }
+        private void SwitchTurn()
+        {
+            // Alternate turns between 1 (White) and 2 (Black)
+            turnNum++;
 
-                        // Check if the square contains an opponent's piece
-                        ChessPiece targetPiece = boardState[r, c];
-                        if (targetPiece != null && targetPiece.Color != boardState[row, col]?.Color)
-                        {
-                            // Red circle for opponent's piece
-                            highlight.Fill = Brushes.Red;
-                        }
-                        else
-                        {
-                            // Black circle for valid move
-                            highlight.Fill = Brushes.Black;
-                        }
-
-                        // Position the circle in the center of the square
-                        Canvas.SetLeft(highlight, c * SquareSize + (SquareSize - highlight.Width) / 2);
-                        Canvas.SetTop(highlight, r * SquareSize + (SquareSize - highlight.Height) / 2);
-                        chessBoard.Children.Add(highlight);
-                    }
-                }
-            }
+            // Update status to show whose turn it is
+        }
+        private void ClearHighlights()
+        {
+            chessBoard.Children.Clear();
+            RemakeBoard();
         }
         private void MovePiece(int fromRow, int fromCol, int toRow, int toCol)
         {
@@ -646,29 +613,71 @@ namespace ChessSharp
             boardState[toRow, toCol] = piece;
 
             chessBoard.Children.Clear();
-            DrawChessBoard();
-            DrawPieces();
+            RemakeBoard();
             UpdateStatus("Piece moved and board redrawn.");
         }
-        private void ClearHighlights()
-        {
-            chessBoard.Children.Clear();
-            DrawChessBoard();
-            DrawPieces();
-        }
-        private void ChessBoardCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            Point mousePos = e.GetPosition(ChessBoardCanvas);
-            int row = (int)(mousePos.Y / SquareSize);
-            int col = (int)(mousePos.X / SquareSize);
-            OnSquareClick(row, col);
-        }
-        private void SwitchTurn()
-        {
-            // Alternate turns between 1 (White) and 2 (Black)
-            turnNum++;
 
-            // Update status to show whose turn it is
+        // Unmapped
+
+
+        private void ClearScoreSheet_Click(object sender, RoutedEventArgs e)
+        {
+            // Clear the move history
+            MoveHistory.Clear();
+        }
+        private void UpdateStatus(string message)
+        {
+            StatusItem.Content = message;
+        }
+        private string GetDisambiguation(ChessPiece piece, int startRow, int startCol, int endRow, int endCol)
+        {
+            if (piece is Pawn)
+                return string.Empty; // Pawns don't require disambiguation
+
+            bool sameFile = false, sameRank = false, samePieceConflict = false;
+
+            for (int r = 0; r < 8; r++)
+            {
+                for (int c = 0; c < 8; c++)
+                {
+                    if (r == startRow && c == startCol)
+                        continue;
+
+                    ChessPiece otherPiece = boardState[r, c];
+                    if (otherPiece?.GetType() == piece.GetType() && otherPiece?.Color == piece.Color)
+                    {
+                        if (otherPiece.IsValidMove(r, c, endRow, endCol, boardState))
+                        {
+                            samePieceConflict = true;
+                            if (r == startRow)
+                                sameRank = true;
+                            if (c == startCol)
+                                sameFile = true;
+                        }
+                    }
+                }
+            }
+
+            if (!samePieceConflict)
+                return string.Empty; // No disambiguation needed
+
+            if (sameRank && sameFile)
+                return $"{(char)('a' + startCol)}{8 - startRow}"; // Use both rank and file
+            else if (sameFile)
+                return $"{8 - startRow}"; // Use rank only
+            else
+                return $"{(char)('a' + startCol)}"; // Use file only
+        }
+        // Example placeholders for IsCheck and IsCheckmate
+        private bool IsCheck()
+        {
+            // Logic to determine if the move puts the opponent's king in check
+            return false;
+        }
+        private bool IsCheckmate()
+        {
+            // Logic to determine if the move checkmates the opponent's king
+            return false;
         }
         private void PromotePawn(Pawn pawn, int toRow, int toCol)
         {
@@ -687,7 +696,9 @@ namespace ChessSharp
             }
         }
     }
-        public abstract class ChessPiece
+
+
+    public abstract class ChessPiece
     {
         public string Color { get; set; }
         public bool HasMoved { get; set; }  // Track if the piece has moved
